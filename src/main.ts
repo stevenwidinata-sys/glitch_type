@@ -20,5 +20,11 @@ route('/blackhole', () => import('./ui/blackhole-page').then((m) => m.blackholeS
 route('/blackhole/play', () => import('./ui/blackhole-page').then((m) => m.blackholePlayScreen));
 route('/repair', () => import('./ui/repair-page').then((m) => m.repairScreen));
 route('/repair/play', () => import('./ui/repair-page').then((m) => m.repairPlayScreen));
+route('/lessons', () => import('./ui/lessons-page').then((m) => m.lessonsScreen));
+route('/lessons/play', () => import('./ui/lessons-page').then((m) => m.lessonPlayScreen));
+route('/stats', () => import('./ui/stats-page').then((m) => m.statsScreen));
+route('/daily', () => import('./ui/daily').then((m) => m.dailyScreen));
+route('/settings', () => import('./ui/settings').then((m) => m.settingsScreen));
+route('/challenge', () => import('./ui/challenge').then((m) => m.challengeScreen));
 
 startRouter();
