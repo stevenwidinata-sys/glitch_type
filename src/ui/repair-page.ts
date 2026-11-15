@@ -4,6 +4,7 @@ import type { Screen } from '../router';
 import { navigate } from '../router';
 import { store, save, type Lang } from '../core/storage';
 import { randomSeed } from '../core/rng';
+import { parsePlayParams } from '../core/params';
 import { recordRun, submitBest } from '../core/stats';
 import { unlock } from '../core/achievements';
 import { onKeys } from '../core/input';
@@ -84,12 +85,7 @@ export const repairPlayScreen: Screen = (root, params) => {
   const src: RepairConfig['src'] = params.get('src') === 'common' ? 'common' : 'story';
   const rule: RepairConfig['rule'] = params.get('rule') === 'timed' ? 'timed' : 'survival';
   const time = [15, 30, 60].includes(Number(params.get('t'))) ? Number(params.get('t')) : 30;
-  const lang: Lang = params.get('lang') === 'id' ? 'id' : params.get('lang') === 'en' ? 'en' : store.settings.lang;
-  const seedRaw = Number(params.get('seed'));
-  const fixedSeed = params.get('seed') && Number.isFinite(seedRaw) ? seedRaw : null;
-  const beatRaw = Number(params.get('beat'));
-  const beat = params.get('beat') && Number.isFinite(beatRaw) ? beatRaw : undefined;
-  const daily = params.get('daily') ?? undefined;
+  const { lang, seed: fixedSeed, beat, daily } = parsePlayParams(params);
 
   let game: RepairGame | null = null;
   let closeResults: (() => void) | null = null;

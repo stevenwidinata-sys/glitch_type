@@ -1,8 +1,9 @@
 import '../styles/game.css';
 import type { Screen } from '../router';
 import { navigate } from '../router';
-import { store, save, type Lang } from '../core/storage';
+import { store, save } from '../core/storage';
 import { randomSeed } from '../core/rng';
+import { parsePlayParams } from '../core/params';
 import { calcAcc, recordRun, submitBest } from '../core/stats';
 import { unlock } from '../core/achievements';
 import { runBlackHole, type BHConfig, type BHGame, type BHResult } from '../games/blackhole/game';
@@ -57,12 +58,7 @@ export const blackholeScreen: Screen = (root) => {
 export const blackholePlayScreen: Screen = (root, params) => {
   const mode = params.get('mode') === 'campaign' ? 'campaign' : 'endless';
   const level = Math.max(1, Math.min(20, Number(params.get('level')) || 1));
-  const lang: Lang = params.get('lang') === 'id' ? 'id' : params.get('lang') === 'en' ? 'en' : store.settings.lang;
-  const seedRaw = Number(params.get('seed'));
-  const fixedSeed = params.get('seed') && Number.isFinite(seedRaw) ? seedRaw : null;
-  const beatRaw = Number(params.get('beat'));
-  const beat = params.get('beat') && Number.isFinite(beatRaw) ? beatRaw : undefined;
-  const daily = params.get('daily') ?? undefined;
+  const { lang, seed: fixedSeed, beat, daily } = parsePlayParams(params);
 
   if (mode === 'campaign' && level > store.campaign.unlocked && fixedSeed === null) {
     navigate('/blackhole');
