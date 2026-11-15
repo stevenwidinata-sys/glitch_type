@@ -85,8 +85,10 @@ export const repairPlayScreen: Screen = (root, params) => {
   const rule: RepairConfig['rule'] = params.get('rule') === 'timed' ? 'timed' : 'survival';
   const time = [15, 30, 60].includes(Number(params.get('t'))) ? Number(params.get('t')) : 30;
   const lang: Lang = params.get('lang') === 'id' ? 'id' : params.get('lang') === 'en' ? 'en' : store.settings.lang;
-  const fixedSeed = params.get('seed') ? Number(params.get('seed')) : null;
-  const beat = params.get('beat') ? Number(params.get('beat')) : undefined;
+  const seedRaw = Number(params.get('seed'));
+  const fixedSeed = params.get('seed') && Number.isFinite(seedRaw) ? seedRaw : null;
+  const beatRaw = Number(params.get('beat'));
+  const beat = params.get('beat') && Number.isFinite(beatRaw) ? beatRaw : undefined;
   const daily = params.get('daily') ?? undefined;
 
   let game: RepairGame | null = null;

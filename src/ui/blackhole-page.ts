@@ -58,8 +58,10 @@ export const blackholePlayScreen: Screen = (root, params) => {
   const mode = params.get('mode') === 'campaign' ? 'campaign' : 'endless';
   const level = Math.max(1, Math.min(20, Number(params.get('level')) || 1));
   const lang: Lang = params.get('lang') === 'id' ? 'id' : params.get('lang') === 'en' ? 'en' : store.settings.lang;
-  const fixedSeed = params.get('seed') ? Number(params.get('seed')) : null;
-  const beat = params.get('beat') ? Number(params.get('beat')) : undefined;
+  const seedRaw = Number(params.get('seed'));
+  const fixedSeed = params.get('seed') && Number.isFinite(seedRaw) ? seedRaw : null;
+  const beatRaw = Number(params.get('beat'));
+  const beat = params.get('beat') && Number.isFinite(beatRaw) ? beatRaw : undefined;
   const daily = params.get('daily') ?? undefined;
 
   if (mode === 'campaign' && level > store.campaign.unlocked && fixedSeed === null) {
@@ -80,7 +82,7 @@ export const blackholePlayScreen: Screen = (root, params) => {
     const wpm = r.ms > 0 ? Math.round(r.chars / 5 / (r.ms / 60000)) : 0;
     const acc = calcAcc(r.hits, r.hits + r.misses);
     const modeKey = mode === 'endless' ? 'bh-endless' : 'bh-campaign';
-    recordRun({ mode: modeKey, wpm, acc, score: r.score, chars: r.chars, lang });
+    if (r.chars > 0) recordRun({ mode: modeKey, wpm, acc, score: r.score, chars: r.chars, lang });
     let isBest = false;
     let stars = 0;
     if (mode === 'endless') {
