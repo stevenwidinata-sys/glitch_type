@@ -1,0 +1,360 @@
+/* ============ lessons / stats / daily / settings ============ */
+
+.lesson-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.lesson-card {
+  --c: var(--green);
+  text-align: left;
+  cursor: pointer;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  background: var(--panel);
+  color: var(--text);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  transition: transform 0.12s, background 0.12s;
+}
+
+.lesson-card:hover {
+  transform: translateY(-3px);
+  background: color-mix(in srgb, var(--c) 12%, var(--panel-solid));
+}
+
+.lesson-card .n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c);
+}
+
+.lesson-card h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  margin: 6px 0;
+}
+
+.lesson-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lesson-card .keys {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  letter-spacing: 0.2em;
+  word-break: break-all;
+}
+
+.lesson-card .best {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--yellow);
+}
+
+.lesson-card.weak {
+  --c: var(--red);
+}
+
+.lesson-play {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+.lesson-play .panel {
+  margin: 18px 0;
+}
+
+.lesson-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.lesson-top .hud {
+  position: static;
+  padding: 0;
+}
+
+/* stats */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.stat-card b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin-top: 4px;
+}
+
+.stat-card.hl b {
+  color: var(--yellow);
+}
+
+.chart-wrap {
+  position: relative;
+  height: 240px;
+}
+
+.chart-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.chart-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+@media (max-width: 860px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+
+.weak-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.weak-list span {
+  font-family: var(--font-mono);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 6px 10px;
+  font-weight: 800;
+}
+
+.weak-list span small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.ach {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.ach.on {
+  opacity: 1;
+  filter: none;
+  border-color: var(--yellow);
+  box-shadow: inset 0 0 20px rgba(255, 233, 74, 0.08);
+}
+
+.ach .i {
+  font-size: 22px;
+}
+
+.ach b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 12px;
+  margin: 6px 0 4px;
+  letter-spacing: 0.05em;
+}
+
+.ach span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.runs {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.runs th,
+.runs td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.runs th {
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+
+/* daily */
+.daily-date {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 96px);
+  line-height: 1;
+  background: linear-gradient(90deg, var(--yellow), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdown {
+  font-family: var(--font-mono);
+  color: var(--muted);
+  margin: 8px 0 28px;
+}
+
+.countdown b {
+  color: var(--cyan);
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.week div {
+  border: 1px solid var(--line);
+  padding: 10px 4px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.week div.done {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(57, 255, 136, 0.06);
+}
+
+.week div.today {
+  border-color: var(--yellow);
+}
+
+.week b {
+  display: block;
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+/* settings */
+.set-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.set-row:last-child {
+  border-bottom: 0;
+}
+
+.set-row h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.set-row p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+input[type='range'] {
+  accent-color: var(--pink);
+  width: 200px;
+}
+
+.btn.danger {
+  --c: var(--red);
+}
+
+/* challenge */
+.challenge {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.challenge .panel {
+  max-width: 520px;
+  padding: 36px 28px;
+}
+
+.challenge .score {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(60px, 14vw, 120px);
+  line-height: 1;
+  color: var(--pink);
+  text-shadow: 0 0 40px rgba(255, 43, 214, 0.5);
+  margin: 16px 0 4px;
+}
