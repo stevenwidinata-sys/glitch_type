@@ -16,5 +16,7 @@ window.addEventListener('pointerdown', prime, { once: true });
 window.addEventListener('keydown', prime, { once: true });
 
 route('/', () => import('./ui/home').then((m) => m.homeScreen));
+route('/blackhole', () => import('./ui/blackhole-page').then((m) => m.blackholeScreen));
+route('/blackhole/play', () => import('./ui/blackhole-page').then((m) => m.blackholePlayScreen));
 
 startRouter();
