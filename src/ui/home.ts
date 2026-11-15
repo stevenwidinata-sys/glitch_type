@@ -129,8 +129,8 @@ export const homeScreen: Screen = (root) => {
   function measure(): void {
     W = window.innerWidth;
     H = window.innerHeight;
-    railY = W < 640 ? 62 : 74;
-    floorY = H - (W < 640 ? 70 : 104);
+    railY = W < 640 ? 104 : 74;
+    floorY = H - (W < 640 ? 122 : 104);
     chuteW = Math.max(96, Math.min(180, W * 0.13));
     cw = Math.max(112, Math.min(210, W * 0.135));
     ch = cw * 0.52;
