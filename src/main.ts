@@ -27,7 +27,8 @@ route('/daily', () => import('./ui/daily').then((m) => m.dailyScreen));
 route('/settings', () => import('./ui/settings').then((m) => m.settingsScreen));
 route('/racer', () => import('./ui/racer-page').then((m) => m.racerScreen));
 route('/racer/play', () => import('./ui/racer-page').then((m) => m.racerPlayScreen));
-route('/boss', () => import('./ui/coming-soon').then((m) => m.comingSoon('boss')));
+route('/boss', () => import('./ui/boss-page').then((m) => m.bossScreen));
+route('/boss/play', () => import('./ui/boss-page').then((m) => m.bossPlayScreen));
 route('/bomb', () => import('./ui/coming-soon').then((m) => m.comingSoon('bomb')));
 route('/challenge', () => import('./ui/challenge').then((m) => m.challengeScreen));
 

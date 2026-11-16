@@ -1,0 +1,313 @@
+/* ============ boss duel ============ */
+.duel {
+  --bc: #9b4dff;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #030006;
+}
+
+.duel.miss .bd-words {
+  animation: shake 0.22s linear;
+}
+
+.bd-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bd-top {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 24px));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 14px;
+  align-items: end;
+}
+
+.bd-name b {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(18px, 3vw, 28px);
+  color: #fff;
+  text-shadow: 0 0 16px var(--bc);
+  letter-spacing: 0.06em;
+}
+
+.bd-name span {
+  margin-left: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bd-top .bd-name,
+.bd-top .bd-hp {
+  grid-column: 1;
+}
+
+.bd-top .hud-btn {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.bd-hp {
+  position: relative;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--bc) 60%, transparent);
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+.bd-hp-ghost,
+.bd-hp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+
+.bd-hp-ghost {
+  background: #fff;
+  opacity: 0.5;
+}
+
+.bd-hp-fill {
+  z-index: 1;
+  background: linear-gradient(90deg, var(--bc), color-mix(in srgb, var(--bc) 50%, #fff));
+  box-shadow: 0 0 16px var(--bc);
+  transition: width 0.12s;
+}
+
+.bd-player {
+  position: absolute;
+  z-index: 5;
+  left: 18px;
+  bottom: 18px;
+  width: min(260px, 40vw);
+  font-family: var(--font-mono);
+}
+
+.bd-php {
+  height: 12px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 43, 214, 0.5);
+}
+
+.bd-php div {
+  height: 100%;
+  background: linear-gradient(90deg, #ff2b4d, #ff2bd6);
+  box-shadow: 0 0 12px #ff2bd6;
+  transition: width 0.2s;
+}
+
+.bd-combo {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--yellow);
+  min-height: 1em;
+}
+
+.bd-words {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(820px, calc(100% - 24px));
+}
+
+.bd-attacks {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.bd-attack,
+.bd-block {
+  position: relative;
+  padding: 10px 22px 12px;
+  text-align: center;
+  background: rgba(5, 0, 12, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.25);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.bd-attack.locked {
+  border-color: var(--yellow);
+  box-shadow: 0 0 30px rgba(255, 233, 74, 0.4);
+  transform: translateY(-3px);
+}
+
+.bd-attack.dim {
+  opacity: 0.35;
+}
+
+.bd-attack.breach {
+  border-color: #ff7a2b;
+  box-shadow: 0 0 30px rgba(255, 122, 43, 0.5);
+}
+
+.bd-tag {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--cyan);
+  margin-bottom: 4px;
+}
+
+.bd-attack.breach .bd-tag {
+  color: #ff7a2b;
+}
+
+.bd-word {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: clamp(24px, 3.4vw, 40px);
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.bd-word span.d {
+  color: var(--cyan);
+  opacity: 0.55;
+}
+
+.bd-word span.n {
+  text-decoration: underline 3px var(--yellow);
+  text-underline-offset: 6px;
+}
+
+.bd-word.lag span:not(.d) {
+  animation: lag-blink 1.3s infinite;
+}
+
+@keyframes lag-blink {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 1; }
+  55% { opacity: 0.08; }
+  70% { opacity: 0.6; }
+}
+
+.bd-block {
+  border-color: #ff2b4d;
+  box-shadow: 0 0 40px rgba(255, 43, 77, 0.55);
+  animation: block-in 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.bd-block.hidden {
+  display: none;
+}
+
+.bd-block .bd-tag {
+  color: #ff2b4d;
+  font-weight: 800;
+}
+
+.bd-block .bd-word {
+  font-size: clamp(30px, 4.4vw, 52px);
+}
+
+.bd-block .bd-word span.d {
+  color: #ff8a9a;
+}
+
+.bd-timer {
+  height: 5px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bd-timer div {
+  height: 100%;
+  background: #ff2b4d;
+  box-shadow: 0 0 10px #ff2b4d;
+}
+
+.duel.danger .bd-block {
+  animation: block-pulse 0.3s infinite alternate;
+}
+
+@keyframes block-in {
+  from { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes block-pulse {
+  to { box-shadow: 0 0 60px rgba(255, 43, 77, 0.9); }
+}
+
+/* boss select inside the crate */
+.boss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.boss-card {
+  --bc: #9b4dff;
+  cursor: pointer;
+  text-align: left;
+  padding: 14px;
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--bc) 60%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--bc) 18%, transparent), rgba(0, 0, 0, 0.4));
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: transform 0.12s;
+}
+
+.boss-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+}
+
+.boss-card:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.boss-card canvas {
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+
+.boss-card b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--bc);
+  margin-top: 6px;
+}
+
+.boss-card small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.boss-card .done {
+  color: var(--yellow);
+}
+
+@media (max-width: 640px) {
+  .bd-player {
+    bottom: auto;
+    top: 76px;
+  }
+}
