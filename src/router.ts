@@ -55,6 +55,7 @@ async function render(): Promise<void> {
   root.className = '';
   window.scrollTo(0, 0);
   current = screen(root, params);
+  window.dispatchEvent(new CustomEvent('glitch:routed', { detail: path }));
 }
 
 export function startRouter(): void {
