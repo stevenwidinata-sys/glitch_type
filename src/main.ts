@@ -29,7 +29,8 @@ route('/racer', () => import('./ui/racer-page').then((m) => m.racerScreen));
 route('/racer/play', () => import('./ui/racer-page').then((m) => m.racerPlayScreen));
 route('/boss', () => import('./ui/boss-page').then((m) => m.bossScreen));
 route('/boss/play', () => import('./ui/boss-page').then((m) => m.bossPlayScreen));
-route('/bomb', () => import('./ui/coming-soon').then((m) => m.comingSoon('bomb')));
+route('/bomb', () => import('./ui/bomb-page').then((m) => m.bombScreen));
+route('/bomb/play', () => import('./ui/bomb-page').then((m) => m.bombPlayScreen));
 route('/challenge', () => import('./ui/challenge').then((m) => m.challengeScreen));
 
 startRouter();
