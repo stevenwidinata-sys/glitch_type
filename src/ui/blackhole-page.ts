@@ -28,7 +28,8 @@ export const blackholeScreen: Screen = (root) => {
           ${n > unlocked ? '🔒' : n}<small>${n > unlocked ? '' : '★'.repeat(stars) + '☆'.repeat(3 - stars)}</small></button>`;
       }).join('')}
     </div>`;
-  const help = `<p class="cr-help"><b>Endless</b>: 3 shields, waves speed up forever, combos up to x8, power-up words FREEZE, NUKE and SHIELD.<br>
+  const help = `<p class="cr-help"><b>Endless</b>: 3 shields, waves speed up forever, combos up to x8, power-up words FREEZE, NUKE, SHIELD and MAGNET.<br>
+    <b>Watch out</b>: silver <b>armored</b> rocks must be typed twice, orange <b>splitter</b> rocks break into two letters.<br>
     <b>Campaign</b>: 20 levels from the home row to bosses. Stars come from accuracy.<br>
     Words lock on after the first letter: <span class="kbd">Backspace</span> releases the lock, <span class="kbd">Esc</span> pauses.</p>`;
 

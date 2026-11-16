@@ -56,5 +56,5 @@ export function endlessWave(n: number): WaveDef {
   };
 }
 
-export const POWERS = ['freeze', 'nuke', 'shield'] as const;
+export const POWERS = ['freeze', 'nuke', 'shield', 'magnet'] as const;
 export type Power = (typeof POWERS)[number];

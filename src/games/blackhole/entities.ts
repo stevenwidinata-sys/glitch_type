@@ -25,6 +25,32 @@ export interface Rock {
   hue: string;
   dead: boolean;
   flash: number;
+  /** armored rocks need their word typed this many extra times */
+  armor: number;
+  /** splitter rocks break into two letter rocks */
+  splitter: boolean;
+  trail: { x: number; y: number }[];
+}
+
+export interface Debris {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  vr: number;
+  size: number;
+  life: number;
+  color: string;
+}
+
+export interface FloatNum {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  life: number;
+  size: number;
 }
 
 export interface Particle {
@@ -90,6 +116,9 @@ export function makeRock(
     hue,
     dead: false,
     flash: 0,
+    armor: 0,
+    splitter: false,
+    trail: [],
   };
 }
 
@@ -107,6 +136,24 @@ export function burst(list: Particle[], x: number, y: number, n: number, colors:
       max: life,
       size: 1.5 + Math.random() * 3,
       color: colors[i % colors.length],
+    });
+  }
+}
+
+export function debrisBurst(list: Debris[], x: number, y: number, n: number, color: string, size: number): void {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 120 + Math.random() * 260;
+    list.push({
+      x,
+      y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - 40,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 12,
+      size: size * (0.25 + Math.random() * 0.35),
+      life: 0.7 + Math.random() * 0.5,
+      color,
     });
   }
 }

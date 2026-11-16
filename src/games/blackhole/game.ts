@@ -9,7 +9,7 @@ import { unlock } from '../../core/achievements';
 import type { Lang } from '../../core/storage';
 import { wordsFor } from '../../data/lessons';
 import { CAMPAIGN, endlessWave, POWERS, type WaveDef, type Power } from './levels';
-import { makeRock, burst, type Rock, type Particle, type Laser, type Ring } from './entities';
+import { makeRock, burst, debrisBurst, type Rock, type Particle, type Laser, type Ring, type Debris, type FloatNum } from './entities';
 
 export interface BHConfig {
   mode: 'endless' | 'campaign';
@@ -119,6 +119,13 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
   let over = false;
   let shipAngle = -Math.PI / 2;
   let holePulse = 0;
+  let hitStop = 0;
+  let magnet = 0;
+  let magnetTick = 0;
+  const debris: Debris[] = [];
+  const floats: FloatNum[] = [];
+  const armorChance = () => (cfg.mode === 'endless' ? (waveNo >= 4 ? 0.18 : 0) : waveNo >= 11 ? 0.22 : 0);
+  const splitChance = () => (cfg.mode === 'endless' ? (waveNo >= 3 ? 0.16 : 0) : waveNo >= 6 ? 0.16 : 0);
 
   const mult = () => Math.min(8, 1 + Math.floor(combo / 10));
 
@@ -144,11 +151,20 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
       rock = makeRock(rng, 'power', power, from, tx, wave.fall * 1.1, power);
     } else if (rng() < wave.wordRatio) {
       rock = makeRock(rng, 'word', pickWord(wave.wordLen[0], wave.wordLen[1]), from, tx, wave.fall * (1 + wave.wordLen[1] * 0.04));
+      if (rng() < armorChance()) {
+        rock.armor = 1;
+        rock.hue = '#cfd8ff';
+        rock.fall *= 1.25;
+      }
     } else {
       // avoid two identical letters on screen at once when possible
       let letter = pick(rng, [...wave.letters]);
       for (let i = 0; i < 4 && rocks.some((r) => !r.dead && r.text[0] === letter); i++) letter = pick(rng, [...wave.letters]);
       rock = makeRock(rng, 'letter', letter, from, tx, wave.fall);
+      if (rng() < splitChance()) {
+        rock.splitter = true;
+        rock.hue = '#ff8a2b';
+      }
     }
     // never start two rocks with the same first letter while unlocked words are active
     rocks.push(rock);
@@ -161,6 +177,14 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
     b.innerHTML = `${text}${sub ? `<small>${sub}</small>` : ''}`;
     wrap.append(b);
     setTimeout(() => b.remove(), 1700);
+  }
+
+  function announce(text: string): void {
+    const a = document.createElement('div');
+    a.className = 'announcer';
+    a.textContent = text;
+    wrap.append(a);
+    setTimeout(() => a.remove(), 1100);
   }
 
   function glitch(): void {
@@ -181,14 +205,30 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
   }
 
   function destroyRock(rock: Rock, byPlayer = true): void {
+    // armored rocks lose a plate first and must be typed again
+    if (byPlayer && rock.armor > 0) {
+      rock.armor--;
+      rock.typed = 0;
+      rock.hue = '#b14dff';
+      if (locked === rock) locked = null;
+      debrisBurst(debris, rock.x, rock.y, 8, '#cfd8ff', rock.r);
+      floats.push({ x: rock.x, y: rock.y - rock.r - 10, text: 'ARMOR BROKEN', color: '#cfd8ff', life: 1, size: 14 });
+      sfx.block();
+      hitStop = 0.04;
+      return;
+    }
     rock.dead = true;
     if (locked === rock) locked = null;
     const big = rock.kind === 'boss';
-    burst(particles, rock.x, rock.y, big ? 70 : 26, [rock.hue, '#ffffff', '#ff2bd6'], big ? 420 : 280);
+    burst(particles, rock.x, rock.y, big ? 70 : 22, [rock.hue, '#ffffff', '#ff2bd6'], big ? 420 : 280);
+    debrisBurst(debris, rock.x, rock.y, big ? 18 : 6, rock.hue, rock.r);
     rings.push({ x: rock.x, y: rock.y, r: rock.r, life: 0.5, color: rock.hue });
     sfx.explode(big);
     if (!byPlayer) return;
-    score += rock.text.length * 10 * mult() + (big ? 500 : 0);
+    const pts = rock.text.length * 10 * mult() + (big ? 500 : 0);
+    score += pts;
+    hitStop = Math.max(hitStop, big ? 0.14 : 0.03);
+    floats.push({ x: rock.x, y: rock.y, text: '+' + pts, color: mult() > 1 ? '#ffe94a' : '#fff', life: 0.9, size: big ? 30 : 18 });
     if (big) {
       unlock('boss');
       shake = Math.max(shake, 14);
@@ -199,6 +239,16 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
         shard.sy = rock.y;
         rocks.push(shard);
       }
+    }
+    if (rock.splitter) {
+      for (const dir of [-1, 1]) {
+        const shard = makeRock(rng, 'letter', pick(rng, [...wave.letters]), { x: rock.x, y: rock.y }, Math.max(40, Math.min(W - 40, rock.x + dir * 140)), wave.fall * 0.7);
+        shard.sx = rock.x;
+        shard.sy = rock.y;
+        shard.p = 0.06;
+        rocks.push(shard);
+      }
+      floats.push({ x: rock.x, y: rock.y - 24, text: 'SPLIT!', color: '#ff8a2b', life: 0.8, size: 14 });
     }
     if (rock.kind === 'power' && rock.power) triggerPower(rock.power);
   }
@@ -217,6 +267,10 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
     } else if (p === 'shield') {
       lives = Math.min(MAX_LIVES, lives + 1);
       banner('SHIELD +1');
+    } else if (p === 'magnet') {
+      magnet = 5;
+      magnetTick = 0.2;
+      banner('MAGNET', 'auto-aim for 5 seconds');
     }
   }
 
@@ -239,6 +293,8 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
     bestCombo = Math.max(bestCombo, combo);
     if (combo >= 50) unlock('combo_50');
     if (combo > 0 && combo % 10 === 0) sfx.combo(combo / 10);
+    const shout = ({ 10: 'NICE!', 25: 'GREAT!', 50: 'UNSTOPPABLE!', 75: 'LEGENDARY!', 100: 'GODLIKE!' } as Record<number, string>)[combo];
+    if (shout) announce(shout);
     fire(rock);
     if (rock.typed >= rock.text.length) destroyRock(rock);
   }
@@ -307,9 +363,26 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
 
   // ---- update ----
   function update(dt: number): void {
+    const stopped = hitStop > 0;
+    hitStop = Math.max(0, hitStop - dt);
     const ts = freeze > 0 ? 0.35 : 1;
     freeze = Math.max(0, freeze - dt);
-    const gdt = dt * ts;
+    const gdt = stopped ? 0 : dt * ts;
+
+    // magnet: auto-fire at the lowest rock
+    if (magnet > 0) {
+      magnet -= dt;
+      magnetTick -= dt;
+      if (magnetTick <= 0) {
+        magnetTick = 0.4;
+        let low: Rock | null = null;
+        for (const r of rocks) if (!r.dead && r.kind !== 'power' && r.p > 0.05 && (!low || r.p > low.p)) low = r;
+        if (low) {
+          fire(low);
+          destroyRock(low);
+        }
+      }
+    }
     playMs += dt * 1000;
 
     // spawning
@@ -354,6 +427,10 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
       r.y = r.sy + (groundY - r.r * 0.5 - r.sy) * e;
       r.rot += r.spin * gdt;
       r.flash = Math.max(0, r.flash - dt);
+      if (gdt > 0) {
+        r.trail.push({ x: r.x, y: r.y });
+        if (r.trail.length > 7) r.trail.shift();
+      }
       if (r.p >= 1) {
         r.dead = true;
         if (locked === r) locked = null;
@@ -384,6 +461,19 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
       p.life -= dt;
     }
     for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
+    for (const d of debris) {
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += 260 * dt;
+      d.rot += d.vr * dt;
+      d.life -= dt;
+    }
+    for (let i = debris.length - 1; i >= 0; i--) if (debris[i].life <= 0) debris.splice(i, 1);
+    for (const f of floats) {
+      f.y -= 50 * dt;
+      f.life -= dt;
+    }
+    for (let i = floats.length - 1; i >= 0; i--) if (floats[i].life <= 0) floats.splice(i, 1);
     for (const l of lasers) l.life -= dt;
     for (let i = lasers.length - 1; i >= 0; i--) if (lasers[i].life <= 0) lasers.splice(i, 1);
     for (const r of rings) {
@@ -398,6 +488,34 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
 
   // ---- render ----
   const stars = Array.from({ length: 140 }, () => ({ x: Math.random(), y: Math.random(), z: 0.2 + Math.random() * 0.8 }));
+  const nebula = (() => {
+    const c = document.createElement('canvas');
+    c.width = 900;
+    c.height = 900;
+    const n = c.getContext('2d')!;
+    const r = mulberry32(cfg.seed ^ 0x5eed);
+    for (let i = 0; i < 26; i++) {
+      const x = r() * 900;
+      const y = r() * 900;
+      const rad = 80 + r() * 220;
+      const col = ['139,43,255', '255,43,214', '0,240,255', '60,20,140'][i % 4];
+      const g = n.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, 'rgba(' + col + ',' + (0.06 + r() * 0.08) + ')');
+      g.addColorStop(1, 'rgba(' + col + ',0)');
+      n.fillStyle = g;
+      // draw wrapped copies so the tile repeats without seams
+      for (const ox of [-900, 0, 900]) {
+        for (const oy of [-900, 0, 900]) {
+          n.save();
+          n.translate(ox, oy);
+          n.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+          n.restore();
+        }
+      }
+    }
+    return c;
+  })();
+  let nebulaY = 0;
 
   function drawHole(t: number): void {
     ctx.save();
@@ -436,6 +554,17 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
 
   function drawRock(r: Rock, t: number): void {
     const scale = Math.min(1, 0.25 + r.p * 6);
+    // glow trail
+    for (let i = 0; i < r.trail.length - 1; i++) {
+      const p = r.trail[i];
+      const k = i / r.trail.length;
+      ctx.globalAlpha = k * 0.25;
+      ctx.fillStyle = r.hue;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r.r * scale * (0.3 + k * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     ctx.save();
     ctx.translate(r.x, r.y);
     ctx.save();
@@ -467,6 +596,52 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
     ctx.arc(r.r * 0.3, r.r * 0.2, r.r * 0.16, 0, Math.PI * 2);
     ctx.arc(-r.r * 0.25, -r.r * 0.35, r.r * 0.1, 0, Math.PI * 2);
     ctx.fill();
+    // speckle texture + rim light
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    for (let i = 0; i < 6; i++) {
+      const a = r.shape[i % r.shape.length] * 9 + i;
+      ctx.fillRect(Math.cos(a) * r.r * 0.5, Math.sin(a) * r.r * 0.5, 2, 2);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r.r * 0.78, Math.PI * 1.05, Math.PI * 1.6);
+    ctx.stroke();
+    if (r.armor > 0) {
+      // metal plates
+      ctx.strokeStyle = '#cfd8ff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      r.shape.forEach((m, i) => {
+        const a = (i / r.shape.length) * Math.PI * 2;
+        const px = Math.cos(a) * r.r * m * 0.82;
+        const py = Math.sin(a) * r.r * m * 0.82;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = '#cfd8ff';
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r.r * 0.55, Math.sin(a) * r.r * 0.55, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (r.splitter) {
+      ctx.strokeStyle = '#ffd08a';
+      ctx.shadowColor = '#ff8a2b';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r.r * 0.7, -r.r * 0.1);
+      ctx.lineTo(-r.r * 0.2, r.r * 0.1);
+      ctx.lineTo(r.r * 0.1, -r.r * 0.15);
+      ctx.lineTo(r.r * 0.7, r.r * 0.12);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
     ctx.restore();
 
     if (scale < 0.6) {
@@ -563,32 +738,78 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(shipAngle + Math.PI / 2);
+    // engine flame
+    const fl = 0.7 + Math.random() * 0.5;
+    const flame = ctx.createLinearGradient(0, 10, 0, 34 * fl);
+    flame.addColorStop(0, 'rgba(255,255,255,0.95)');
+    flame.addColorStop(0.3, 'rgba(0,240,255,0.9)');
+    flame.addColorStop(1, 'rgba(255,43,214,0)');
+    ctx.fillStyle = flame;
+    ctx.beginPath();
+    ctx.moveTo(-7, 12);
+    ctx.quadraticCurveTo(0, 40 * fl, 7, 12);
+    ctx.fill();
+    // wings
     ctx.fillStyle = '#16032c';
     ctx.strokeStyle = '#ff2bd6';
     ctx.shadowColor = '#ff2bd6';
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 18;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(0, -28);
-    ctx.lineTo(18, 14);
-    ctx.lineTo(6, 8);
-    ctx.lineTo(0, 16);
-    ctx.lineTo(-6, 8);
-    ctx.lineTo(-18, 14);
+    ctx.moveTo(0, -12);
+    ctx.lineTo(26, 12);
+    ctx.lineTo(24, 18);
+    ctx.lineTo(8, 12);
+    ctx.lineTo(-8, 12);
+    ctx.lineTo(-24, 18);
+    ctx.lineTo(-26, 12);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#00f0ff';
+    // hull
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
     ctx.beginPath();
-    ctx.arc(0, -6, 4, 0, Math.PI * 2);
+    ctx.moveTo(0, -32);
+    ctx.lineTo(9, -6);
+    ctx.lineTo(8, 14);
+    ctx.lineTo(-8, 14);
+    ctx.lineTo(-9, -6);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // cockpit
+    const cp = ctx.createLinearGradient(0, -20, 0, -4);
+    cp.addColorStop(0, '#ffe94a');
+    cp.addColorStop(1, '#ff2bd6');
+    ctx.fillStyle = cp;
+    ctx.beginPath();
+    ctx.ellipse(0, -12, 4, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // wing tip lights
+    ctx.fillStyle = Math.sin(performance.now() / 120) > 0 ? '#ff2b4d' : '#39ff88';
+    ctx.fillRect(-26, 11, 3, 3);
+    ctx.fillRect(23, 11, 3, 3);
     ctx.restore();
+    if (magnet > 0) {
+      ctx.strokeStyle = 'rgba(255,233,74,' + (0.4 + Math.sin(performance.now() / 80) * 0.2) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 40, Math.PI, 0);
+      ctx.stroke();
+    }
   }
 
   function render(t: number): void {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#07000f';
     ctx.fillRect(0, 0, W, H);
+    // parallax nebula
+    nebulaY = (nebulaY + 0.15 * (freeze > 0 ? 0.3 : 1)) % 900;
+    for (let ty = -900 + nebulaY; ty < H; ty += 900) {
+      for (let tx = 0; tx < W; tx += 900) ctx.drawImage(nebula, tx, ty);
+    }
     if (shake > 0.3 && !store.settings.reducedMotion) {
       ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     }
@@ -633,7 +854,38 @@ export function runBlackHole(root: HTMLElement, cfg: BHConfig, onEnd: (r: BHResu
       ctx.fillRect(p.x, p.y, p.size, p.size);
     }
     ctx.globalAlpha = 1;
+    for (const d of debris) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, d.life * 1.5);
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.rot);
+      ctx.fillStyle = '#1a0a30';
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-d.size, -d.size * 0.4);
+      ctx.lineTo(d.size * 0.6, -d.size * 0.7);
+      ctx.lineTo(d.size, d.size * 0.5);
+      ctx.lineTo(-d.size * 0.4, d.size * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
     drawShip();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const f of floats) {
+      ctx.globalAlpha = Math.min(1, f.life * 2);
+      ctx.font = '900 ' + f.size + 'px Orbitron, sans-serif';
+      ctx.fillStyle = f.color;
+      ctx.shadowColor = f.color;
+      ctx.shadowBlur = 10;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
 
     if (freeze > 0) {
       ctx.fillStyle = `rgba(0,200,255,${0.08 + Math.sin(t * 6) * 0.03})`;
