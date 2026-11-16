@@ -125,4 +125,65 @@ export const sfx = {
     tone({ type: 'sine', from: 120, to: 45, dur: 0.18, vol: 0.22 });
     noise(0.1, 0.12, 600);
   },
+  beep(high = false): void {
+    tone({ type: 'square', from: high ? 1320 : 660, dur: high ? 0.35 : 0.16, vol: 0.14 });
+  },
+  skid(): void {
+    noise(0.35, 0.22, 5000);
+    tone({ type: 'sawtooth', from: 900, to: 400, dur: 0.3, vol: 0.06 });
+  },
+  hurt(): void {
+    tone({ type: 'sawtooth', from: 220, to: 70, dur: 0.3, vol: 0.22 });
+    noise(0.2, 0.25, 1400);
+  },
+  block(): void {
+    tone({ type: 'triangle', from: 1500, to: 1200, dur: 0.12, vol: 0.16 });
+    tone({ type: 'square', from: 300, dur: 0.08, vol: 0.1 });
+  },
+  snip(): void {
+    noise(0.06, 0.3, 8000);
+    tone({ type: 'square', from: 2400, to: 1800, dur: 0.05, vol: 0.1 });
+  },
+  tick(fast = false): void {
+    tone({ type: 'square', from: fast ? 1800 : 1200, dur: 0.03, vol: 0.06 });
+  },
+  alarm(): void {
+    tone({ type: 'square', from: 880, to: 660, dur: 0.18, vol: 0.12 });
+  },
 };
+
+/** Continuous engine hum for Neon Racer. */
+export function createEngine(): { set(speed: number): void; stop(): void } {
+  const c = ac();
+  if (!c || !master) return { set() {}, stop() {} };
+  const osc = c.createOscillator();
+  const osc2 = c.createOscillator();
+  const f = c.createBiquadFilter();
+  const g = c.createGain();
+  osc.type = 'sawtooth';
+  osc2.type = 'square';
+  f.type = 'lowpass';
+  f.frequency.value = 500;
+  g.gain.value = 0;
+  osc.connect(f);
+  osc2.connect(f);
+  f.connect(g).connect(master);
+  osc.start();
+  osc2.start();
+  return {
+    set(speed: number) {
+      const t = c.currentTime;
+      const s = Math.max(0, Math.min(1, speed));
+      osc.frequency.setTargetAtTime(48 + s * 110, t, 0.08);
+      osc2.frequency.setTargetAtTime(24 + s * 55, t, 0.08);
+      f.frequency.setTargetAtTime(300 + s * 1400, t, 0.1);
+      g.gain.setTargetAtTime(0.035 + s * 0.06, t, 0.1);
+    },
+    stop() {
+      const t = c.currentTime;
+      g.gain.setTargetAtTime(0, t, 0.05);
+      osc.stop(t + 0.3);
+      osc2.stop(t + 0.3);
+    },
+  };
+}

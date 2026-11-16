@@ -30,6 +30,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'student', icon: '✎', name: 'Student', desc: 'Finish 5 lessons' },
   { id: 'runs_50', icon: '∞', name: 'Addicted', desc: 'Finish 50 runs' },
   { id: 'claw', icon: '⚙', name: 'Claw Master', desc: 'Grab a crate with the claw by hand' },
+  { id: 'race_win', icon: '⚑', name: 'Checkered Flag', desc: 'Win a Neon Racer race' },
+  { id: 'race_hard', icon: '🏆', name: 'Speed Demon', desc: 'Win a race on Hard' },
+  { id: 'boss_first', icon: '⚔', name: 'First Blood', desc: 'Defeat your first boss' },
+  { id: 'boss_kernel', icon: '♛', name: 'Kernel Panic', desc: 'Defeat The Kernel' },
+  { id: 'bomb_close', icon: '⏱', name: 'Close Call', desc: 'Defuse a bomb with less than 1 second left' },
+  { id: 'bomb_squad', icon: '✹', name: 'Bomb Squad', desc: 'Clear all 12 bomb levels' },
 ];
 
 export function unlock(id: string): boolean {

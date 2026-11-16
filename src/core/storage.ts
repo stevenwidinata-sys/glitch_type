@@ -37,6 +37,12 @@ export interface SaveData {
   practiceDays: string[];
   lessons: Record<string, number>; // lesson id -> best wpm
   seenIntro: boolean;
+  /** Neon Racer ghost runs: passage id -> ms timestamps per char reached */
+  ghosts: Record<string, number[]>;
+  /** Boss Duel progress */
+  boss: { unlocked: number; best: Record<number, number> };
+  /** Bomb Defuse progress */
+  bomb: { unlocked: number; best: Record<number, number> };
 }
 
 const KEY = 'glitch_type:v1';
@@ -60,6 +66,9 @@ function defaults(): SaveData {
     practiceDays: [],
     lessons: {},
     seenIntro: false,
+    ghosts: {},
+    boss: { unlocked: 1, best: {} },
+    bomb: { unlocked: 1, best: {} },
   };
 }
 
@@ -75,6 +84,8 @@ function load(): SaveData {
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings ?? {}) },
       campaign: { ...base.campaign, ...(parsed.campaign ?? {}) },
+      boss: { ...base.boss, ...(parsed.boss ?? {}) },
+      bomb: { ...base.bomb, ...(parsed.bomb ?? {}) },
     };
   } catch {
     return base;
