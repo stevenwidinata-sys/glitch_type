@@ -7,76 +7,43 @@ import { randomSeed } from '../core/rng';
 import { parsePlayParams } from '../core/params';
 import { recordRun, submitBest } from '../core/stats';
 import { unlock } from '../core/achievements';
-import { onKeys } from '../core/input';
 import { runRepair, type RepairConfig, type RepairGame, type RepairResult } from '../games/repair/repair';
 import { showResults } from './results';
 import { guardKeyboard } from './mobile-notice';
+import { renderCrateMenu, seg, optRow, bindSegs } from './crate-menu';
 
 // remembered for this visit only
-const last = { src: 'story' as RepairConfig['src'], rule: 'survival' as RepairConfig['rule'], time: 30 };
-
-function seg(name: string, options: [string, string][], value: string): string {
-  return `<div class="seg" data-seg="${name}">${options
-    .map(([v, label]) => `<button type="button" data-v="${v}" aria-pressed="${v === value}">${label}</button>`)
-    .join('')}</div>`;
-}
+const last = { src: 'story' as RepairConfig['src'], rule: 'survival' as RepairConfig['rule'], time: 30, lang: null as Lang | null };
 
 export const repairScreen: Screen = (root) => {
-  let lang: Lang = store.settings.lang;
-  root.innerHTML = `
-    <div class="page rp-setup">
-      <div class="page-head">
-        <a class="back" href="#/">← claw machine</a>
-        <div>
-          <h1 class="page-title glitch" data-text="REPAIR PROTOCOL">REPAIR PROTOCOL</h1>
-          <p class="page-sub">// the transmission is corrupted. type every word to restore it.</p>
-        </div>
-      </div>
-      <div class="setup-grid">
-        <div class="panel">
-          <div class="opt-row"><span class="label">source</span>${seg('src', [['story', 'Story logs'], ['common', 'Common words']], last.src)}</div>
-          <div class="opt-row"><span class="label">rule</span>${seg('rule', [['survival', 'Survival'], ['timed', 'Timed']], last.rule)}</div>
-          <div class="opt-row" data-time><span class="label">time</span>${seg('time', [['15', '15s'], ['30', '30s'], ['60', '60s']], String(last.time))}</div>
-          <div class="opt-row"><span class="label">language</span>${seg('lang', [['en', 'English'], ['id', 'Bahasa Indonesia']], lang)}</div>
-          <button class="btn pink go" type="button">Start repair <span class="k">↵ enter</span></button>
-        </div>
-        <div class="panel">
-          <span class="label">how it works</span>
-          <p class="muted" style="line-height:1.7">
-            <b style="color:var(--text)">Survival</b>: corruption rises every second. Each word you repair pushes it back, each mistake makes it worse. Finish the text before it hits 100%.<br><br>
-            <b style="color:var(--text)">Timed</b>: repair as many words as you can before the clock runs out. Your score is your WPM.<br><br>
-            Words that flicker are still corrupted. Wrong words stay broken, so accuracy matters.
-          </p>
-          <div class="best" style="font-family:var(--font-mono);font-size:12px;color:var(--yellow);margin-top:12px">
-            BEST SURVIVAL: ${store.bests['repair-survival'] ?? 0} wpm · BEST TIMED 60s: ${store.bests['repair-timed-60'] ?? 0} wpm
-          </div>
-        </div>
-      </div>
-    </div>`;
-
+  let lang: Lang = last.lang ?? store.settings.lang;
+  const off = renderCrateMenu(root, {
+    id: 'repair',
+    tagline: 'the transmission is corrupted. type every word to restore it.',
+    options:
+      optRow('source', seg('src', [['story', 'Story logs'], ['common', 'Common words']], last.src)) +
+      optRow('rule', seg('rule', [['survival', 'Survival'], ['timed', 'Timed']], last.rule)) +
+      optRow('time', seg('time', [['15', '15s'], ['30', '30s'], ['60', '60s']], String(last.time)), 'data-time') +
+      optRow('language', seg('lang', [['en', 'English'], ['id', 'Bahasa Indonesia']], lang)),
+    extra: `<p class="cr-help"><b>Survival</b>: corruption rises every second. Each repaired word pushes it back, each mistake makes it worse. Finish before it hits 100%.<br>
+      <b>Timed</b>: repair as many words as you can before the clock runs out. Your score is your WPM.<br>
+      Flickering words are still corrupted. Wrong words stay broken, so accuracy matters.</p>`,
+    bests: [
+      { label: 'survival best', value: `${store.bests['repair-survival'] ?? 0} wpm` },
+      { label: 'timed 60s best', value: `${store.bests['repair-timed-60'] ?? 0} wpm` },
+    ],
+    startLabel: 'Start repair',
+    onStart: () => navigate(`/repair/play?src=${last.src}&rule=${last.rule}&t=${last.time}&lang=${lang}`),
+  });
   const timeRow = root.querySelector<HTMLElement>('[data-time]')!;
   const syncTime = () => (timeRow.style.display = last.rule === 'timed' ? '' : 'none');
   syncTime();
-
-  root.querySelectorAll<HTMLDivElement>('.seg').forEach((s) => {
-    s.addEventListener('click', (e) => {
-      const b = (e.target as HTMLElement).closest('button');
-      if (!b) return;
-      s.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      const v = b.dataset.v!;
-      const name = s.dataset.seg;
-      if (name === 'src') last.src = v as RepairConfig['src'];
-      if (name === 'rule') last.rule = v as RepairConfig['rule'];
-      if (name === 'time') last.time = Number(v);
-      if (name === 'lang') lang = v as Lang;
-      syncTime();
-    });
-  });
-
-  const go = () => navigate(`/repair/play?src=${last.src}&rule=${last.rule}&t=${last.time}&lang=${lang}`);
-  root.querySelector('.go')!.addEventListener('click', go);
-  const off = onKeys((k) => {
-    if (k === 'Enter') go();
+  bindSegs(root, (name, v) => {
+    if (name === 'src') last.src = v as RepairConfig['src'];
+    if (name === 'rule') last.rule = v as RepairConfig['rule'];
+    if (name === 'time') last.time = Number(v);
+    if (name === 'lang') last.lang = lang = v as Lang;
+    syncTime();
   });
   return off;
 };
