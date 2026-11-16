@@ -80,6 +80,7 @@ export const bossPlayScreen: Screen = (root, params) => {
   const def = BOSSES[n - 1];
   let game: { destroy(): void } | null = null;
   let closeResults: (() => void) | null = null;
+  let alive = true; // results that arrive after leaving the screen are ignored
 
   const start = () => {
     game?.destroy();
@@ -88,6 +89,7 @@ export const bossPlayScreen: Screen = (root, params) => {
   };
 
   const end = (r: DuelResult, seed: number) => {
+    if (!alive) return;
     if (r.chars > 0) recordRun({ mode: 'boss', wpm: r.wpm, acc: r.acc, score: r.win ? Math.round(r.ms) : 0, chars: r.chars, lang: 'en' });
     let isBest = false;
     if (r.win) {
@@ -128,6 +130,7 @@ export const bossPlayScreen: Screen = (root, params) => {
 
   if (guardKeyboard(root, start)) start();
   return () => {
+    alive = false;
     game?.destroy();
     closeResults?.();
   };

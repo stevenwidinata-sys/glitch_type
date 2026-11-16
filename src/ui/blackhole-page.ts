@@ -71,6 +71,7 @@ export const blackholePlayScreen: Screen = (root, params) => {
 
   let game: BHGame | null = null;
   let closeResults: (() => void) | null = null;
+  let alive = true; // results that arrive after leaving the screen are ignored
 
   const start = (lv = level) => {
     game?.destroy();
@@ -79,6 +80,7 @@ export const blackholePlayScreen: Screen = (root, params) => {
   };
 
   const end = (cfg: BHConfig, r: BHResult) => {
+    if (!alive) return;
     const wpm = r.ms > 0 ? Math.round(r.chars / 5 / (r.ms / 60000)) : 0;
     const acc = calcAcc(r.hits, r.hits + r.misses);
     const modeKey = mode === 'endless' ? 'bh-endless' : 'bh-campaign';
@@ -137,6 +139,7 @@ export const blackholePlayScreen: Screen = (root, params) => {
   if (guardKeyboard(root, () => start())) start();
 
   return () => {
+    alive = false;
     game?.destroy();
     closeResults?.();
   };

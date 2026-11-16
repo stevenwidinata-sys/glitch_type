@@ -56,6 +56,7 @@ export const repairPlayScreen: Screen = (root, params) => {
 
   let game: RepairGame | null = null;
   let closeResults: (() => void) | null = null;
+  let alive = true; // results that arrive after leaving the screen are ignored
 
   const start = () => {
     game?.destroy();
@@ -64,6 +65,7 @@ export const repairPlayScreen: Screen = (root, params) => {
   };
 
   const end = (cfg: RepairConfig, r: RepairResult) => {
+    if (!alive) return;
     if (r.aborted) {
       start();
       return;
@@ -109,6 +111,7 @@ export const repairPlayScreen: Screen = (root, params) => {
   if (guardKeyboard(root, start)) start();
 
   return () => {
+    alive = false;
     game?.destroy();
     closeResults?.();
   };

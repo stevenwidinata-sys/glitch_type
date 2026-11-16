@@ -49,6 +49,7 @@ export const racerPlayScreen: Screen = (root, params) => {
 
   let game: { destroy(): void } | null = null;
   let closeResults: (() => void) | null = null;
+  let alive = true; // results that arrive after leaving the screen are ignored
 
   const start = (same?: { passage: (typeof RACE_PASSAGES)[number]; seed: number }) => {
     game?.destroy();
@@ -62,6 +63,7 @@ export const racerPlayScreen: Screen = (root, params) => {
   };
 
   const end = (r: RacerResult, passage: (typeof RACE_PASSAGES)[number], seed: number) => {
+    if (!alive) return;
     const passageId = passage.id;
     recordRun({ mode: 'racer', wpm: r.wpm, acc: r.acc, score: r.wpm, chars: r.chars, lang: 'en' });
     const isBest = submitBest('racer-wpm', r.wpm).isBest;
@@ -108,6 +110,7 @@ export const racerPlayScreen: Screen = (root, params) => {
   if (guardKeyboard(root, () => start())) start();
 
   return () => {
+    alive = false;
     game?.destroy();
     closeResults?.();
   };
