@@ -13,6 +13,9 @@ const MODE_NAMES: Record<string, string> = {
   'repair-survival': 'Repair · Survival',
   'repair-timed': 'Repair · Timed',
   lesson: 'Lesson',
+  racer: 'Neon Racer',
+  boss: 'Boss Duel',
+  bomb: 'Bomb Defuse',
 };
 
 function avg(nums: number[]): number {

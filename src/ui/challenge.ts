@@ -5,7 +5,7 @@ import { navigate } from '../router';
 import { decodeChallenge } from '../core/share';
 import { onKeys } from '../core/input';
 
-const ALLOWED = new Set(['/blackhole/play', '/repair/play']);
+const ALLOWED = new Set(['/blackhole/play', '/repair/play', '/racer/play', '/boss/play', '/bomb/play']);
 
 export const challengeScreen: Screen = (root, params) => {
   const c = decodeChallenge(params.get('d'));

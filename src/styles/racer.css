@@ -1,0 +1,258 @@
+/* ============ neon racer ============ */
+.racer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #07001a;
+}
+
+.racer .rc-road {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.racer.skidding .rc-road {
+  filter: hue-rotate(-25deg) saturate(1.4);
+}
+
+.rc-hud {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  pointer-events: none;
+}
+
+.rc-hud .hud-btn {
+  pointer-events: auto;
+}
+
+.rc-place {
+  font-family: var(--font-display);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 18px var(--pink);
+  min-width: 86px;
+}
+
+.rc-place b {
+  font-size: clamp(38px, 6vw, 60px);
+}
+
+.rc-place b[data-p='1'] {
+  color: var(--yellow);
+  text-shadow: 0 0 20px var(--yellow);
+}
+
+.rc-place span {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.rc-map {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  margin: 0 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.rc-map::after {
+  content: '🏁';
+  position: absolute;
+  right: -22px;
+  top: -10px;
+  font-size: 16px;
+}
+
+.rc-map i {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+  border: 2px solid #0b0018;
+  transition: left 0.15s linear;
+}
+
+.rc-map i:first-child {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  z-index: 2;
+}
+
+/* start lights */
+.rc-lights {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 22px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid #333;
+  border-radius: 14px;
+  transition: opacity 0.4s;
+}
+
+.rc-lights i {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #300;
+  box-shadow: inset 0 0 10px #000;
+}
+
+.rc-lights.on-1 i:nth-child(1),
+.rc-lights.on-2 i:nth-child(-n + 2),
+.rc-lights.on-3 i:nth-child(-n + 3) {
+  background: #ff2b4d;
+  box-shadow: 0 0 24px #ff2b4d;
+}
+
+.rc-lights.go i {
+  background: #39ff88;
+  box-shadow: 0 0 30px #39ff88;
+}
+
+.rc-lights span {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 34px;
+  color: #39ff88;
+  text-shadow: 0 0 20px #39ff88;
+}
+
+.rc-lights span:empty {
+  display: none;
+}
+
+.rc-lights.hide {
+  opacity: 0;
+}
+
+/* dashboard */
+.rc-dash {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(1100px, calc(100% - 24px));
+  display: grid;
+  grid-template-columns: 130px 1fr 110px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(20, 0, 40, 0.88), rgba(8, 0, 18, 0.95));
+  border: 1px solid rgba(255, 43, 214, 0.5);
+  border-radius: 18px 18px 10px 10px;
+  box-shadow: 0 0 40px rgba(255, 43, 214, 0.25);
+  backdrop-filter: blur(6px);
+}
+
+.rc-gauge {
+  position: relative;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+.rc-gauge svg {
+  width: 120px;
+  height: 70px;
+  display: block;
+  margin: 0 auto -26px;
+}
+
+.rc-arc-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.rc-arc {
+  fill: none;
+  stroke: url(#none);
+  stroke: var(--pink);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  filter: drop-shadow(0 0 6px var(--pink));
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.rc-gauge b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #fff;
+}
+
+.rc-gauge span {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.rc-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--yellow);
+  margin-bottom: 4px;
+}
+
+.rc-title span {
+  color: var(--muted);
+}
+
+.racer .tt {
+  font-size: clamp(17px, 2.1vw, 24px);
+  height: calc(1.9em * 2);
+}
+
+.rc-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+}
+
+.rc-stats div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rc-stats b {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+@media (max-width: 760px) {
+  .rc-dash {
+    grid-template-columns: 1fr;
+  }
+  .rc-gauge,
+  .rc-stats {
+    display: none;
+  }
+}
