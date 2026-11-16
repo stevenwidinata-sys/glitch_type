@@ -10,7 +10,7 @@ A neon, glitch-themed typing trainer with arcade game modes. No login, no databa
 - **Lessons**: row-by-row drills with an on-screen finger guide.
 - **Stats**: WPM history, personal bests, a weak-key heatmap and achievements.
 
-Pick a mode with the **claw machine** on the start screen: steer with the arrow keys, press Space to drop, type a crate label, or just click a crate.
+Pick a mode with the **claw machine** on the start screen: move with **A / D**, drop with **S** (or Space), pull back up with **W**. Arrow keys work too, or just click a crate.
 
 Words and passages are available in **English** and **Bahasa Indonesia**.
 

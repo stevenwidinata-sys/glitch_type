@@ -148,56 +148,6 @@ button.chip:hover {
   border-color: var(--cyan);
 }
 
-/* typing prompt */
-.home-prompt {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  bottom: 52px;
-  transform: translateX(-50%);
-  font-family: var(--font-mono);
-  font-size: clamp(16px, 2.4vw, 22px);
-  font-weight: 600;
-  padding: 10px 20px;
-  background: rgba(10, 0, 20, 0.78);
-  border: 1px solid var(--line);
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.home-prompt .gt {
-  color: var(--pink);
-  margin-right: 10px;
-}
-
-.home-prompt .typed {
-  color: var(--yellow);
-}
-
-.home-prompt .ghost {
-  color: var(--dim);
-}
-
-.home-prompt .caret {
-  display: inline-block;
-  width: 0.6em;
-  height: 1.1em;
-  vertical-align: -0.18em;
-  background: var(--cyan);
-  animation: blink 1s steps(1) infinite;
-  margin-left: 1px;
-}
-
-.home-prompt.bad {
-  animation: shake 0.28s linear;
-  border-color: var(--red);
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
-}
-
 .home-hints {
   position: absolute;
   z-index: 5;
@@ -226,9 +176,6 @@ button.chip:hover {
   }
   .home-hints .touch {
     display: inline;
-  }
-  .home-prompt {
-    display: none;
   }
 }
 

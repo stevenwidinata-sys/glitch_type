@@ -1,11 +1,10 @@
 // The start screen: a claw machine full of neon cargo crates.
-// Steer the claw (arrow keys + space), type a crate label, or click a crate.
+// Steer the claw with WASD / arrow keys (S or Space drops), or click a crate.
 // The claw grabs it, drops it in the exit chute, and that mode launches.
 import Matter from 'matter-js';
 import '../styles/home.css';
 import type { Screen } from '../router';
 import { navigate } from '../router';
-import { onKeys } from '../core/input';
 import { sfx } from '../core/audio';
 import { store, save, todayKey } from '../core/storage';
 import { streak } from '../core/stats';
@@ -80,11 +79,11 @@ export const homeScreen: Screen = (root) => {
           <button class="chip sound" type="button"></button>
         </div>
       </header>
-      <div class="home-prompt" aria-hidden="true"><span class="gt">&gt;</span><span class="typed"></span><span class="caret"></span><span class="ghost"></span></div>
       <div class="home-hints">
-        <span class="desk"><span class="kbd">←</span> <span class="kbd">→</span> move claw</span>
-        <span class="desk"><span class="kbd">SPACE</span> drop</span>
-        <span class="desk">or type a crate label</span>
+        <span class="desk"><span class="kbd">A</span> <span class="kbd">D</span> move claw</span>
+        <span class="desk"><span class="kbd">S</span> drop</span>
+        <span class="desk"><span class="kbd">W</span> pull up</span>
+        <span class="desk">or click a crate</span>
         <span class="touch">tap a crate to grab it · drag to throw</span>
       </div>
       <nav class="sr-only" aria-label="Modes">
@@ -97,9 +96,6 @@ export const homeScreen: Screen = (root) => {
   const cv = root.querySelector<HTMLCanvasElement>('.home-machine')!;
   const bgx = bg.getContext('2d')!;
   const ctx = cv.getContext('2d')!;
-  const promptEl = root.querySelector<HTMLDivElement>('.home-prompt')!;
-  const typedEl = root.querySelector<HTMLSpanElement>('.typed')!;
-  const ghostEl = root.querySelector<HTMLSpanElement>('.ghost')!;
   const soundBtn = root.querySelector<HTMLButtonElement>('.sound')!;
   const streakEl = root.querySelector<HTMLSpanElement>('.streak')!;
 
@@ -230,6 +226,7 @@ export const homeScreen: Screen = (root) => {
   claw.tip = restTip();
 
   let missText = 0;
+  let cancelled = false;
   const keysDown = new Set<string>();
 
   function crateAt(x: number, y: number, list = crates): Crate | null {
@@ -254,13 +251,28 @@ export const homeScreen: Screen = (root) => {
     sfx.laser();
   }
 
-  function grab(c: Crate, at: { x: number; y: number }): void {
+  function cancelDrop(): void {
+    if (claw.state !== 'drop') return;
+    claw.state = 'lift';
+    claw.target = null;
+    cancelled = true;
+    sfx.whoosh();
+  }
+
+  function grab(c: Crate): void {
     const b = c.body;
-    const dx = at.x - b.position.x;
-    const dy = at.y - b.position.y;
-    const cos = Math.cos(-b.angle);
-    const sin = Math.sin(-b.angle);
-    const local = { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
+    // grip the middle of whichever face is on top so the crate hangs straight
+    const hw = c.w / 2;
+    const hh = c.h / 2;
+    const sin = Math.sin(b.angle);
+    const cos = Math.cos(b.angle);
+    const worldY = (p: { x: number; y: number }) => p.x * sin + p.y * cos;
+    const local = [
+      { x: 0, y: -hh },
+      { x: 0, y: hh },
+      { x: -hw, y: 0 },
+      { x: hw, y: 0 },
+    ].reduce((best, p) => (worldY(p) < worldY(best) ? p : best));
     claw.rope = Constraint.create({
       pointA: { x: claw.x, y: claw.tip },
       bodyB: b,
@@ -280,7 +292,11 @@ export const homeScreen: Screen = (root) => {
   function release(): void {
     if (claw.rope) Composite.remove(engine.world, claw.rope);
     claw.rope = null;
-    if (claw.held) claw.held.body.frictionAir = 0.012;
+    if (claw.held) {
+      claw.held.body.frictionAir = 0.012;
+      // fall straight through the lip and into the chute
+      claw.held.body.collisionFilter.mask = 0;
+    }
   }
 
   function launch(c: Crate): void {
@@ -295,8 +311,8 @@ export const homeScreen: Screen = (root) => {
     switch (claw.state) {
       case 'idle': {
         let dir = 0;
-        if (keysDown.has('ArrowLeft')) dir -= 1;
-        if (keysDown.has('ArrowRight')) dir += 1;
+        if (keysDown.has('left')) dir -= 1;
+        if (keysDown.has('right')) dir += 1;
         claw.vx += (dir * 560 - claw.vx) * Math.min(1, dt * 10);
         claw.x = Math.max(chuteW + 30, Math.min(W - 30, claw.x + claw.vx * dt));
         claw.open = Math.min(1, claw.open + dt * 3);
@@ -328,7 +344,7 @@ export const homeScreen: Screen = (root) => {
           if (hit) break;
         }
         if (hit) {
-          grab(hit, { x: claw.x, y: claw.tip });
+          grab(hit);
           claw.state = 'grab';
           claw.timer = 0.22;
           sfx.thud();
@@ -352,8 +368,11 @@ export const homeScreen: Screen = (root) => {
           if (claw.held) {
             claw.state = 'carry';
           } else {
-            missText = 1.2;
-            sfx.error();
+            if (!cancelled) {
+              missText = 1.2;
+              sfx.error();
+            }
+            cancelled = false;
             claw.state = 'idle';
             claw.target = null;
           }
@@ -382,6 +401,11 @@ export const homeScreen: Screen = (root) => {
         break;
       }
       case 'return':
+        claw.open = Math.min(1, claw.open + dt * 3);
+        // failsafe: launch even if the crate somehow didn't leave the screen
+        claw.timer -= dt;
+        if (claw.timer < -1.5 && claw.held) launch(claw.held);
+        break;
       case 'done':
         claw.open = Math.min(1, claw.open + dt * 3);
         break;
@@ -389,92 +413,39 @@ export const homeScreen: Screen = (root) => {
     if (claw.rope) claw.rope.pointA = { x: claw.x, y: claw.tip };
   }
 
-  // ---- typing to pick a crate ----
-  let buffer = '';
+  // ---- keyboard: WASD / arrows steer the claw ----
+  // e.code = physical key position, so WASD works on any keyboard layout
+  const LEFT = new Set(['KeyA', 'ArrowLeft']);
+  const RIGHT = new Set(['KeyD', 'ArrowRight']);
+  const DROP = new Set(['KeyS', 'ArrowDown', 'Space', 'Enter', 'NumpadEnter']);
+  const LIFT = new Set(['KeyW', 'ArrowUp']);
 
-  function bestMatch(buf: string): Crate | null {
-    if (!buf) return null;
-    return crates.find((c) => c.key.startsWith(buf)) ?? null;
-  }
-
-  function paintPrompt(): void {
-    const m = bestMatch(buffer);
-    typedEl.textContent = buffer;
-    ghostEl.textContent = m ? m.key.slice(buffer.length) : buffer ? '' : 'type a crate label…';
-  }
-  paintPrompt();
-
-  function badKey(): void {
-    sfx.error();
-    promptEl.classList.remove('bad');
-    void promptEl.offsetWidth;
-    promptEl.classList.add('bad');
-  }
-
-  const offKeys = onKeys((k) => {
+  const onDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (booting) {
       finishBoot();
       return;
     }
-    if (k === 'Escape') {
-      buffer = '';
-      paintPrompt();
-      return;
-    }
-    if (k === 'Backspace') {
-      buffer = buffer.slice(0, -1);
-      paintPrompt();
-      return;
-    }
-    if (k === ' ' || k === 'Enter') {
-      if (k === 'Enter' && buffer) {
-        const m = crates.filter((c) => c.key.startsWith(buffer));
-        if (m.length === 1 && claw.state === 'idle') {
-          startSeek(m[0]);
-          buffer = '';
-          paintPrompt();
-        } else badKey();
-        return;
-      }
-      if (!buffer) manualDrop();
-      return;
-    }
-    const ch1 = k.toLowerCase();
-    if (!/^[a-z]$/.test(ch1)) return;
-    let next = buffer + ch1;
-    if (!bestMatch(next)) {
-      next = ch1;
-      if (!bestMatch(next)) {
-        buffer = '';
-        paintPrompt();
-        badKey();
-        return;
-      }
-    }
-    buffer = next;
-    sfx.key();
-    const m = bestMatch(buffer);
-    if (m && m.key === buffer && claw.state === 'idle') {
-      startSeek(m);
-      buffer = '';
-    }
-    paintPrompt();
-  });
-
-  const onDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    const c = e.code;
+    if (LEFT.has(c) || RIGHT.has(c)) {
       e.preventDefault();
-      if (booting) {
-        finishBoot();
-        return;
-      }
-      if (e.key === 'ArrowDown') manualDrop();
-      else keysDown.add(e.key);
+      keysDown.add(LEFT.has(c) ? 'left' : 'right');
+    } else if (DROP.has(c)) {
+      e.preventDefault();
+      if (!e.repeat) manualDrop();
+    } else if (LIFT.has(c)) {
+      e.preventDefault();
+      cancelDrop();
     }
   };
-  const onUp = (e: KeyboardEvent) => keysDown.delete(e.key);
+  const onUp = (e: KeyboardEvent) => {
+    if (LEFT.has(e.code)) keysDown.delete('left');
+    if (RIGHT.has(e.code)) keysDown.delete('right');
+  };
+  const onBlur = () => keysDown.clear();
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
+  window.addEventListener('blur', onBlur);
 
   // ---- pointer: click to grab, drag to throw ----
   let drag: { crate: Crate; con: Matter.Constraint; sx: number; sy: number; t: number; moved: boolean } | null = null;
@@ -675,7 +646,7 @@ export const homeScreen: Screen = (root) => {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(a);
-    const isHover = hover === c || claw.target === c || bestMatch(buffer) === c;
+    const isHover = hover === c || claw.target === c;
     ctx.shadowColor = col;
     ctx.shadowBlur = isHover ? 30 : 10;
     const g = ctx.createLinearGradient(0, -hh, 0, hh);
@@ -717,26 +688,17 @@ export const homeScreen: Screen = (root) => {
     ctx.font = `900 ${fs}px Orbitron, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const typedN = bestMatch(buffer) === c ? buffer.length : 0;
-    let consumed = 0;
     words.forEach((word, wi) => {
       const ly = (wi - (words.length - 1) / 2) * fs * 1.02 + c.h * 0.08;
       const total = ctx.measureText(word).width;
       let lx = -total / 2;
       for (const chr of word) {
         const cwid = ctx.measureText(chr).width;
-        const typed = consumed < typedN;
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillText(chr, lx + cwid / 2 + 2, ly + 2);
-        ctx.fillStyle = typed ? '#ffe94a' : '#fff';
-        if (typed) {
-          ctx.shadowColor = '#ffe94a';
-          ctx.shadowBlur = 12;
-        }
+        ctx.fillStyle = '#fff';
         ctx.fillText(chr, lx + cwid / 2, ly);
-        ctx.shadowBlur = 0;
         lx += cwid;
-        consumed++;
       }
     });
     // ghosted glitch slice when carried
@@ -1057,9 +1019,9 @@ export const homeScreen: Screen = (root) => {
   return () => {
     cancelAnimationFrame(raf);
     clearTimeout(bootTimer);
-    offKeys();
     window.removeEventListener('keydown', onDown);
     window.removeEventListener('keyup', onUp);
+    window.removeEventListener('blur', onBlur);
     window.removeEventListener('resize', onResize);
     Events.off(engine, 'collisionStart');
     Composite.clear(engine.world, false);
