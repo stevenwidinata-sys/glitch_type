@@ -27,7 +27,8 @@ export const repairScreen: Screen = (root) => {
       optRow('language', seg('lang', [['en', 'English'], ['id', 'Bahasa Indonesia']], lang)),
     extra: `<p class="cr-help"><b>Survival</b>: corruption rises every second. Each repaired word pushes it back, each mistake makes it worse. Finish before it hits 100%.<br>
       <b>Timed</b>: repair as many words as you can before the clock runs out. Your score is your WPM.<br>
-      Flickering words are still corrupted. Wrong words stay broken, so accuracy matters.</p>`,
+      Flickering words are still corrupted. Wrong words stay broken, so accuracy matters.<br>
+      <b style="color:#c77dff">Virus</b> words: get one wrong and it infects the next two words. <b style="color:var(--green)">Clean</b> words cut corruption a lot (or add +1s in Timed).</p>`,
     bests: [
       { label: 'survival best', value: `${store.bests['repair-survival'] ?? 0} wpm` },
       { label: 'timed 60s best', value: `${store.bests['repair-timed-60'] ?? 0} wpm` },

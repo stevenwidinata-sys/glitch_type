@@ -88,9 +88,10 @@ export const sfx = {
     tone({ type: 'square', from: 140, to: 90, dur: 0.14, vol: 0.18 });
     noise(0.08, 0.15, 3000);
   },
-  repair(): void {
-    tone({ type: 'triangle', from: 660, dur: 0.06, vol: 0.14 });
-    tone({ type: 'triangle', from: 990, dur: 0.08, vol: 0.12, delay: 0.05 });
+  repair(streak = 0): void {
+    const k = 1 + Math.min(streak, 24) * 0.035;
+    tone({ type: 'triangle', from: 660 * k, dur: 0.06, vol: 0.14 });
+    tone({ type: 'triangle', from: 990 * k, dur: 0.08, vol: 0.12, delay: 0.05 });
   },
   combo(level: number): void {
     const base = 440 * Math.pow(1.122, Math.min(level, 12));

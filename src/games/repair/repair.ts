@@ -4,7 +4,7 @@ import { mulberry32, pick, shuffle } from '../../core/rng';
 import { onKeys } from '../../core/input';
 import { sfx } from '../../core/audio';
 import { recordKey, calcWpm, calcAcc } from '../../core/stats';
-import type { Lang } from '../../core/storage';
+import { store, type Lang } from '../../core/storage';
 import { wordsFor, storiesFor } from '../../data/lessons';
 import { TypingText } from '../../ui/typing-text';
 import { Corruption } from './corruption';
@@ -66,6 +66,7 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
             <div class="stat"><span class="label">wpm</span><b data-h="wpm">0</b></div>
             <div class="stat"><span class="label">accuracy</span><b data-h="acc">100%</b></div>
             <div class="stat"><span class="label">repaired</span><b data-h="ok">0</b></div>
+            <div class="stat"><span class="label">streak</span><b data-h="streak">0</b></div>
             ${cfg.beat !== undefined ? `<div class="stat"><span class="label">beat this</span><b style="color:var(--pink)">${cfg.beat}</b></div>` : ''}
           </div>
         </div>
@@ -73,7 +74,14 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
       ${survival ? '' : `<div class="rp-timer" data-h="timer">${cfg.time}</div>`}
       <div class="rp-start-hint" data-h="hint">start typing to begin the repair</div>
       <div class="rp-title">${text.title} <span class="src">· ${survival ? 'SURVIVAL' : `TIMED ${cfg.time}s`} · ${cfg.lang.toUpperCase()}</span></div>
-      <div class="panel rp-terminal"></div>
+      <div class="rp-stage">
+        <aside class="rp-log" aria-hidden="true"><div class="rp-log-head">SYS.LOG</div><div data-h="log"></div></aside>
+        <div class="crt"><div class="panel rp-terminal"></div><div class="crt-glass" aria-hidden="true"></div></div>
+        <aside class="rp-legend" aria-hidden="true">
+          <div><i class="v"></i><b>virus</b> fail it and it spreads</div>
+          <div><i class="c"></i><b>clean</b> ${survival ? 'cuts corruption' : '+1 second'}</div>
+        </aside>
+      </div>
       ${
         survival
           ? `<div class="rp-meter"><div class="row"><span>CORRUPTION</span><b data-h="corr">0%</b></div><div class="bar"><div class="fill" data-h="fill"></div></div></div>`
@@ -87,6 +95,11 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
   const h = (k: string) => root.querySelector<HTMLElement>(`[data-h="${k}"]`);
 
   let corruption = survival ? 12 : 0;
+  let streak = 0;
+  let bonus = 0; // timed mode: seconds gained or lost from clean / virus words
+  type Kind = 'normal' | 'virus' | 'clean';
+  const kinds: Kind[] = [];
+  const kindRng = mulberry32(cfg.seed ^ 0x1234);
   let startT = 0;
   let elapsed = 0;
   let over = false;
@@ -106,17 +119,40 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
     },
     onWord(i, ok) {
       fx.clear();
+      const kind = kinds[i] ?? 'normal';
+      const el = tt.wordEl(i);
       if (ok) {
-        sfx.repair();
+        streak++;
+        sfx.repair(streak);
+        if (el) sparks(el, kind === 'clean' ? '#39ff88' : kind === 'virus' ? '#c77dff' : '#00f0ff', kind === 'normal' ? 8 : 16);
         if (survival) corruption = Math.max(0, corruption - (2 + tt.words[i].length * 0.6));
+        if (kind === 'clean') {
+          if (survival) corruption = Math.max(0, corruption - 8);
+          else bonus += 1;
+          if (el) floatText(el, survival ? '-8% CORRUPTION' : '+1s', '#39ff88');
+        }
+        log(tt.words[i], kind === 'virus' ? 'PURGED' : 'OK', kind === 'virus' ? 'v' : 'ok');
       } else {
+        streak = 0;
+        log(tt.words[i], kind === 'virus' ? 'SPREAD' : 'ERR', 'err');
+        if (kind === 'virus') {
+          if (survival) corruption = Math.min(100, corruption + 10);
+          else bonus -= 2;
+          infect(i + 1);
+          infect(i + 2);
+          if (el) floatText(el, 'VIRUS SPREAD', '#c77dff');
+        }
         sfx.error();
         if (survival) corruption = Math.min(100, corruption + 6);
         wrap.classList.remove('glitch-flash');
         void wrap.offsetWidth;
         wrap.classList.add('glitch-flash');
       }
-      if (!survival && tt.remaining() < 40) tt.append(text.more());
+      if (!survival && tt.remaining() < 40) {
+        const from = tt.words.length;
+        tt.append(text.more());
+        markKinds(from);
+      }
     },
     onDone() {
       if (survival) finish(true);
@@ -124,6 +160,89 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
   });
   term.append(tt.el);
   const fx = new Corruption(tt);
+
+  function markKinds(from: number): void {
+    for (let i = from; i < tt.words.length; i++) {
+      const r = kindRng();
+      const k: Kind = i < 3 ? 'normal' : r < 0.09 ? 'virus' : r < 0.17 ? 'clean' : 'normal';
+      kinds[i] = k;
+      if (k !== 'normal') tt.wordEl(i)?.classList.add(k);
+    }
+  }
+  markKinds(0);
+
+  function infect(j: number): void {
+    if (j >= tt.words.length || kinds[j] === 'virus') return;
+    kinds[j] = 'virus';
+    const el = tt.wordEl(j);
+    el?.classList.remove('clean');
+    el?.classList.add('virus', 'infected');
+  }
+
+  function sparks(el: HTMLElement, color: string, n: number): void {
+    if (store.settings.reducedMotion) return;
+    const r = el.getBoundingClientRect();
+    for (let k = 0; k < n; k++) {
+      const sp = document.createElement('i');
+      sp.className = 'rp-spark';
+      const a = Math.random() * Math.PI * 2;
+      const d = 30 + Math.random() * 60;
+      sp.style.left = r.left + r.width / 2 + 'px';
+      sp.style.top = r.top + r.height / 2 + 'px';
+      sp.style.background = color;
+      sp.style.setProperty('--dx', Math.cos(a) * d + 'px');
+      sp.style.setProperty('--dy', Math.sin(a) * d - 20 + 'px');
+      wrap.append(sp);
+      setTimeout(() => sp.remove(), 650);
+    }
+  }
+
+  function floatText(el: HTMLElement, text: string, color: string): void {
+    const r = el.getBoundingClientRect();
+    const f = document.createElement('div');
+    f.className = 'rp-float';
+    f.textContent = text;
+    f.style.left = r.left + r.width / 2 + 'px';
+    f.style.top = r.top - 6 + 'px';
+    f.style.color = color;
+    wrap.append(f);
+    setTimeout(() => f.remove(), 1000);
+  }
+
+  let logN = 0;
+  function log(word: string, status: string, cls: string): void {
+    const box = h('log');
+    if (!box) return;
+    const line = document.createElement('div');
+    line.className = 'rp-log-line ' + cls;
+    const addr = (0x3f00 + logN++ * 7).toString(16).toUpperCase();
+    line.textContent = '0x' + addr + ' ' + word.slice(0, 12) + ' .. ' + status;
+    box.prepend(line);
+    while (box.children.length > 16) box.lastElementChild?.remove();
+  }
+
+  // boot log in the margin
+  const bootTimers: number[] = [];
+  const BOOT: [string, string][] = [
+    ['BIOS', 'REPAIR_PROTOCOL v2.6'],
+    ['MEM', 'CHECK 640K .. OK'],
+    ['LINK', 'UPLINK ESTABLISHED'],
+    ['SCAN', `${text.words.length} PACKETS FOUND`],
+    ['WARN', 'VIRUS SIGNATURES DETECTED'],
+    ['SYS', 'AWAITING OPERATOR'],
+  ];
+  BOOT.forEach(([tag, msg], n) => {
+    bootTimers.push(
+      window.setTimeout(() => {
+        const box = h('log');
+        if (!box) return;
+        const line = document.createElement('div');
+        line.className = 'rp-log-line boot' + (tag === 'WARN' ? ' v' : '');
+        line.textContent = `[${tag}] ${msg}`;
+        box.prepend(line);
+      }, 120 + n * 160),
+    );
+  });
   document.fonts?.ready.then(() => tt.relayout());
   const onResize = () => tt.relayout();
   window.addEventListener('resize', onResize);
@@ -155,7 +274,7 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
   function finish(win: boolean, aborted = false): void {
     if (over) return;
     elapsed = startT ? performance.now() - startT : 0;
-    if (!survival && startT) elapsed = Math.min(elapsed, cfg.time * 1000);
+    if (!survival && startT) elapsed = Math.min(elapsed, (cfg.time + bonus) * 1000);
     over = true;
     fx.clear();
     if (aborted) {
@@ -185,7 +304,7 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
           finish(false);
         }
       } else {
-        const left = Math.max(0, cfg.time - t);
+        const left = Math.max(0, cfg.time + bonus - t);
         const timer = h('timer')!;
         timer.textContent = String(Math.ceil(left));
         timer.classList.toggle('low', left <= 5);
@@ -197,12 +316,13 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
     fx.tick(dt, intensity);
 
     const s = stats();
-    const key = `${s.wpm}|${s.acc}|${s.wordsOk}|${Math.round(corruption)}`;
+    const key = `${s.wpm}|${s.acc}|${s.wordsOk}|${Math.round(corruption)}|${streak}`;
     if (key !== lastHud) {
       lastHud = key;
       h('wpm')!.textContent = String(running ? s.wpm : 0);
       h('acc')!.textContent = `${s.acc}%`;
       h('ok')!.textContent = String(s.wordsOk);
+      h('streak')!.textContent = String(streak);
       if (survival) {
         h('corr')!.textContent = `${Math.round(corruption)}%`;
         h('fill')!.style.width = `${corruption}%`;
@@ -214,6 +334,7 @@ export function runRepair(root: HTMLElement, cfg: RepairConfig, onEnd: (r: Repai
   return {
     destroy() {
       cancelAnimationFrame(raf);
+      bootTimers.forEach((t) => clearTimeout(t));
       offKeys();
       fx.clear();
       window.removeEventListener('resize', onResize);
